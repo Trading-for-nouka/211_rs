@@ -43,46 +43,38 @@ SLEEP_SEC           = 1.2
 # ──────────────────────────────────────────────
 # セクター出遅れ設定（BNF流）
 # ──────────────────────────────────────────────
-SECTOR_RETURN_THRESHOLD = 0.02   # セクター平均5日リターンの閾値（2%）
-SECTOR_LAG_RATIO        = 0.50   # 銘柄リターンがセクター平均の何割未満なら出遅れ
-VOLUME_INCREASE_RATIO   = 1.10   # 出来高が直近20日平均の何倍以上なら増加とみなす
-SECTOR_TOP_N            = 8      # Discord通知する上位件数
+SECTOR_RETURN_THRESHOLD = 0.02
+SECTOR_LAG_RATIO        = 0.50
+VOLUME_INCREASE_RATIO   = 1.10
+SECTOR_TOP_N            = 8
 
 # ──────────────────────────────────────────────
 # 季節性フィルター（バックテスト2015-2025検証済み）
 # ──────────────────────────────────────────────
-# バックテスト結果（5日平均リターン）に基づく月次バイアス設定
-#   +1 = 強気（採用）/ 0 = 中立（採用）/ -1 = 弱気（除外）
-# 除外月: 3月(-0.20%) / 6月(-0.27%) / 7月(-0.15%)
 MONTHLY_BIAS: dict[int, int] = {
-    1:  0,   # +0.12%  中立
-    2:  0,   # +0.12%  中立
-    3: -1,   # -0.20%  除外 ← 決算期末の乱高下
-    4:  1,   # +0.45%  強気
-    5:  1,   # +0.63%  強気 ← 全月最強
-    6: -1,   # -0.27%  除外
-    7: -1,   # -0.15%  除外
-    8:  0,   # +0.28%  中立
-    9:  1,   # +0.44%  強気
-    10: 1,   # +0.52%  強気
-    11: 1,   # +0.36%  強気
-    12: 0,   # +0.05%  中立
+    1:  0,
+    2:  0,
+    3: -1,
+    4:  1,
+    5:  1,
+    6: -1,
+    7: -1,
+    8:  0,
+    9:  1,
+    10: 1,
+    11: 1,
+    12: 0,
 }
 EXCLUDE_MONTHS = [m for m, b in MONTHLY_BIAS.items() if b == -1]
 
 # ──────────────────────────────────────────────
-# ──────────────────────────────────────────────
-# universe.csv 読み込み（銘柄リスト・セクターマップ・社名マップ）
+# universe.csv 読み込み
 # ──────────────────────────────────────────────
 UNIVERSE_CSV = Path(__file__).parent / "universe230.csv"
 
 def load_universe(csv_path: Path):
-    """
-    universe.csv（columns: ticker, name, sector）を読み込み
-    NIKKEI225_SAMPLE / SECTOR_MAP / NAME_MAP を生成して返す。
-    """
     if not csv_path.exists():
-        print(f"[WARN] {csv_path} が見つかりません。銘柄リストが空になります。")
+        print(f"[WARN] {csv_path} が見つかりません。")
         return [], {}, {}
 
     for enc in ("cp932", "utf-8", "utf-8-sig"):
@@ -99,7 +91,6 @@ def load_universe(csv_path: Path):
     tickers  = df["ticker"].str.strip().tolist()
     name_map = dict(zip(df["ticker"].str.strip(), df["name"].str.strip()))
 
-    # 東証業種 → 統合セクター名
     MERGE = {
         "電気機器": "電機・精密", "電気機器・精密機器": "電機・精密", "精密機器": "電機・精密",
         "機械": "機械",
@@ -137,24 +128,11 @@ BENCHMARKS = {
 }
 
 
-
 # ──────────────────────────────────────────────
 # セクター出遅れ検出（BNF流）
 # ──────────────────────────────────────────────
 
-def fetch_volume(ticker: str) -> pd.DataFrame | None:
-    """終値と出来高を両方取得する"""
-    try:
-        df = yf.download(ticker, period=FETCH_PERIOD, progress=False, auto_adjust=True)
-        if df.empty or len(df) < 25:
-            return None
-        return df[["Close", "Volume"]].copy()
-    except Exception:
-        return None
-
-
 def calc_sector_ret(tickers: list[str], stock_data: dict[str, pd.Series], period: int = 5) -> float | None:
-    """セクター内の銘柄群の平均リターンを計算"""
     rets = []
     for t in tickers:
         s = stock_data.get(t)
@@ -171,32 +149,22 @@ def detect_sector_laggards(
     volume_data: dict[str, pd.DataFrame],
     scan_date: str,
 ) -> list[dict]:
-    """
-    BNF流セクター出遅れ銘柄を検出する。
-
-    条件:
-      1. セクター平均5日リターン > SECTOR_RETURN_THRESHOLD（デフォルト2%）
-      2. 個別銘柄5日リターン < セクター平均 × SECTOR_LAG_RATIO（デフォルト50%）
-      3. 直近出来高 > 20日平均出来高 × VOLUME_INCREASE_RATIO（デフォルト1.1倍）
-    """
     results = []
 
     for sector_name, tickers in SECTOR_MAP.items():
-        # セクター内で取得できた銘柄のみ対象
         available = [t for t in tickers if t in stock_data]
         if len(available) < 2:
-            continue  # 比較対象が1銘柄以下はスキップ
+            continue
 
         sector_ret = calc_sector_ret(available, stock_data, period=5)
         if sector_ret is None or sector_ret < SECTOR_RETURN_THRESHOLD:
-            continue  # セクターが動いていない
+            continue
 
         for ticker in available:
             s = stock_data[ticker]
             if len(s) < 6:
                 continue
 
-            # 個別銘柄の5日リターン（nanガード付き）
             try:
                 v_last = float(s.iloc[-1])
                 v_prev = float(s.iloc[-6])
@@ -209,11 +177,9 @@ def detect_sector_laggards(
             if np.isnan(stock_ret):
                 continue
 
-            # 出遅れ判定：銘柄リターンがセクター平均の50%未満
             if stock_ret >= sector_ret * SECTOR_LAG_RATIO:
                 continue
 
-            # 出来高チェック
             vol_ratio = None
             vdf = volume_data.get(ticker)
             if vdf is not None and "Volume" in vdf.columns and len(vdf) >= 21:
@@ -224,11 +190,11 @@ def detect_sector_laggards(
                     if avg_vol > 0 and not np.isnan(recent_vol) and not np.isnan(avg_vol):
                         vol_ratio = recent_vol / avg_vol
                         if vol_ratio < VOLUME_INCREASE_RATIO:
-                            continue  # 出来高が伴っていない
+                            continue
                 except Exception:
                     pass
 
-            lag_score = round((sector_ret - stock_ret) * 100, 2)  # 出遅れ幅（%pt）
+            lag_score = round((sector_ret - stock_ret) * 100, 2)
 
             try:
                 close_val = round(float(s.iloc[-1]), 0)
@@ -245,16 +211,14 @@ def detect_sector_laggards(
                 "close":        close_val,
             })
 
-    # 出遅れ幅（lag_score）の大きい順にソート
     results.sort(key=lambda x: x["lag_score"], reverse=True)
     return results[:SECTOR_TOP_N]
 
 
 # ──────────────────────────────────────────────
-# データ取得（一括取得で高速化）
+# データ取得
 # ──────────────────────────────────────────────
 def fetch_close(ticker: str) -> pd.Series | None:
-    """単一銘柄取得（ベンチマーク用）"""
     try:
         df = yf.download(ticker, period=FETCH_PERIOD, progress=False, auto_adjust=True)
         if df.empty or len(df) < 25:
@@ -264,48 +228,8 @@ def fetch_close(ticker: str) -> pd.Series | None:
         return None
 
 
-def fetch_all(tickers: list[str]) -> dict[str, pd.Series]:
-    """
-    全銘柄を一括取得して終値Seriesの辞書を返す。
-    yfinanceの複数ticker同時ダウンロードで個別取得より大幅に高速化。
-    """
-    BATCH = 50  # 一度に取得する銘柄数（API負荷対策）
-    data: dict[str, pd.Series] = {}
-
-    for i in range(0, len(tickers), BATCH):
-        batch = tickers[i:i + BATCH]
-        try:
-            raw = yf.download(
-                batch,
-                period=FETCH_PERIOD,
-                progress=False,
-                auto_adjust=True,
-                group_by="ticker",
-            )
-            for t in batch:
-                try:
-                    if len(batch) == 1:
-                        close = raw["Close"].squeeze()
-                    else:
-                        close = raw[t]["Close"].squeeze()
-                    if close is not None and len(close) >= 25:
-                        data[t] = close
-                except Exception:
-                    pass
-        except Exception as e:
-            print(f"  [WARN] バッチ取得失敗 ({batch[0]}〜): {e}")
-        print(f"  [{min(i+BATCH, len(tickers))}/{len(tickers)}] 取得完了")
-        time.sleep(SLEEP_SEC)
-
-    return data
-
-
 def fetch_ohlcv_all(tickers: list[str]) -> dict[str, pd.DataFrame]:
-    """
-    全銘柄のOHLCV（Open/Close/Volume）を一括取得。
-    セクタースキャンの出来高チェックに使用。
-    fetch_allと同じデータを取得するため、main()内でキャッシュして両方に使う。
-    """
+    """High/Low/Close/Volume を一括取得（ATR計算に使用）"""
     BATCH = 50
     data: dict[str, pd.DataFrame] = {}
 
@@ -322,9 +246,9 @@ def fetch_ohlcv_all(tickers: list[str]) -> dict[str, pd.DataFrame]:
             for t in batch:
                 try:
                     if len(batch) == 1:
-                        df = raw[["Close", "Volume"]].copy()
+                        df = raw[["High", "Low", "Close", "Volume"]].copy()
                     else:
-                        df = raw[t][["Close", "Volume"]].copy()
+                        df = raw[t][["High", "Low", "Close", "Volume"]].copy()
                     if df is not None and len(df) >= 25:
                         data[t] = df
                 except Exception:
@@ -349,6 +273,18 @@ def calc_rs(stock: pd.Series, bench: pd.Series, period: int) -> pd.Series:
 
 
 # ──────────────────────────────────────────────
+# 売買水準計算（ATRベース参考値）
+# ──────────────────────────────────────────────
+def calc_rs_levels(close: float, atr: float) -> dict:
+    return {
+        "entry_low":  round(close - atr * 0.3),
+        "entry_high": round(close + atr * 0.3),
+        "stop_loss":  round(close - atr * 1.5),
+        "target":     round(close + atr * 3.0),
+    }
+
+
+# ──────────────────────────────────────────────
 # パターン検出
 # ──────────────────────────────────────────────
 def detect_patterns(
@@ -370,12 +306,10 @@ def detect_patterns(
             rs_latest = rs.iloc[-1]
             rs_snapshot[f"RS{period}_{bname}"] = round(float(rs_latest), 3)
 
-            # [A] RS水準
             if rs_latest > RS_LEVEL_THRESHOLD:
                 signals.append(f"[A] RS水準 RS{period}({bname})={rs_latest:.2f}")
                 score += 1
 
-            # [B] RS転換
             if len(rs.dropna()) >= 4:
                 rs_tail = rs.dropna().iloc[-4:]
                 min_idx = rs_tail.iloc[:-1].argmin()
@@ -384,7 +318,6 @@ def detect_patterns(
                         signals.append(f"[B] RS転換 RS{period}({bname}) 底打ち反転")
                         score += 1
 
-            # [C] 隠れ強気
             if period == 20:
                 if price_ret_5 < 0 and rs_latest > RS_HIDDEN_THRESHOLD:
                     signals.append(
@@ -408,14 +341,9 @@ def detect_patterns(
 # ──────────────────────────────────────────────
 # Discord通知
 # ──────────────────────────────────────────────
-# シグナル種別の略称
 SIG_BADGE = {"[A]": "A", "[B]": "B", "[C]": "C"}
 
 def format_discord_embeds(results: list[dict], scan_date: str) -> list[dict]:
-    """
-    RSシグナルをコンパクトな1枚のEmbedにまとめて返す。
-    銘柄ごとに1行で表示し、スマホでも読みやすく。
-    """
     if not results:
         return [{
             "title": f"📈 RSスキャナー — {scan_date}",
@@ -423,24 +351,28 @@ def format_discord_embeds(results: list[dict], scan_date: str) -> list[dict]:
             "color": 0x555555,
         }]
 
-    # 上位5件を1行ずつ列挙
     lines = []
     for r in results:
         ret5 = r["price_ret_5"] * 100
-        # 発火しているシグナル種別バッジ（例: [A][C]）
         badges = "".join(
             f"[{SIG_BADGE[k]}]"
             for k in SIG_BADGE
             if any(k in s for s in r["signals"])
         )
-        # RS20（N225）を代表値として1つだけ表示
         rs20 = r["rs_values"].get("RS20_N225", "-")
         icon = "🔥" if r["score"] >= 6 else "⚡"
         name = NAME_MAP.get(r["ticker"], r["ticker"])
-        lines.append(
+        line = (
             f"{icon} **{name}**（{r['ticker']}） {badges}  "
             f"{r['close']:,.0f}円  {ret5:+.1f}%  RS20={rs20}"
         )
+        if r.get("entry_low"):
+            line += (
+                f"\n　 📌 参考: {r['entry_low']:,}〜{r['entry_high']:,}円"
+                f" | 🛑 撤退目安: {r['stop_loss']:,}円"
+                f" | 🎯 目標目安: {r['target']:,}円"
+            )
+        lines.append(line)
 
     bias_label = "強気月" if MONTHLY_BIAS.get(datetime.date.today().month, 0) > 0 else "中立月"
     description = "\n".join(lines)
@@ -481,7 +413,6 @@ def send_discord_no_signal(scan_date: str):
 
 
 def send_discord_sector(sector_results: list[dict], scan_date: str):
-    """セクター出遅れをコンパクトな1枚Embedで通知"""
     if not DISCORD_WEBHOOK or not sector_results:
         return
 
@@ -490,7 +421,7 @@ def send_discord_sector(sector_results: list[dict], scan_date: str):
         vol_str = f"{r['volume_ratio']}倍" if r["volume_ratio"] else "-"
         name = NAME_MAP.get(r["ticker"], r["ticker"])
         lag  = r["lag_score"]
-        lag_str = f"{lag:+.1f}%pt" if lag == lag else "-"  # nan guard
+        lag_str = f"{lag:+.1f}%pt" if lag == lag else "-"
         lines.append(
             f"⏳ **{name}**（{r['ticker']}） [{r['sector']}]  "
             f"{r['close']:,.0f}円  "
@@ -516,10 +447,9 @@ def main():
     scan_date = datetime.date.today().isoformat()
     today     = datetime.date.today()
     print(f"\n{'='*50}")
-    print(f"RS Scanner v4 開始: {scan_date}")
+    print(f"RS Scanner v5 開始: {scan_date}")
     print(f"{'='*50}")
 
-    # ── 季節性フィルター ──────────────────────
     current_month = today.month
     monthly_bias  = MONTHLY_BIAS.get(current_month, 0)
     if monthly_bias < 0:
@@ -541,7 +471,6 @@ def main():
     bias_label = "強気月" if monthly_bias > 0 else "中立月"
     print(f"\n季節性チェック: {current_month}月 = {bias_label} → スキャン続行")
 
-    # ベンチマーク取得
     print("\n[1/4] ベンチマーク取得中...")
     bench_data = {}
     for bname, bticker in BENCHMARKS.items():
@@ -555,20 +484,16 @@ def main():
         print("[ERROR] ベンチマーク取得失敗")
         return
 
-    # 銘柄データ一括取得（終値＋出来高を1回で取得）
     print(f"\n[2/4] 銘柄データ一括取得中（{len(NIKKEI225_SAMPLE)}銘柄）...")
-    print("  ※ バッチ一括取得で高速化（従来比 1/5 程度）")
     ohlcv_data = fetch_ohlcv_all(NIKKEI225_SAMPLE)
     print(f"  取得成功: {len(ohlcv_data)}/{len(NIKKEI225_SAMPLE)}銘柄")
 
-    # 終値辞書と出来高辞書に分割（既存ロジックへの互換）
     stock_data:  dict[str, pd.Series]    = {}
     volume_data: dict[str, pd.DataFrame] = {}
     for t, df in ohlcv_data.items():
         stock_data[t]  = df["Close"].squeeze()
         volume_data[t] = df
 
-    # RSスキャン
     print("\n[3/4] RSスキャン実行中...")
     results = []
     for ticker, stock in stock_data.items():
@@ -580,12 +505,17 @@ def main():
     top_results = results[:TOP_N]
     print(f"  RS検出: {len(results)}件 → 上位{len(top_results)}件")
 
-    # セクター出遅れスキャン（BNF流）
+    # ATR・売買水準を追加
+    for r in top_results:
+        ohlcv = volume_data.get(r["ticker"])
+        if ohlcv is not None and "High" in ohlcv.columns and len(ohlcv) >= 14:
+            atr = float((ohlcv["High"] - ohlcv["Low"]).rolling(14).mean().iloc[-1])
+            r.update(calc_rs_levels(r["close"], atr))
+
     print("\n[4/4] セクター出遅れスキャン実行中...")
     sector_results = detect_sector_laggards(stock_data, volume_data, scan_date)
     print(f"  セクター出遅れ検出: {len(sector_results)}件")
 
-    # Discord通知（RS ＋ セクター出遅れ）
     if top_results:
         send_discord(top_results, scan_date)
     else:
@@ -594,7 +524,6 @@ def main():
     if sector_results:
         send_discord_sector(sector_results, scan_date)
 
-    # 結果サマリー
     print(f"\n── RSシグナル上位 ──")
     for r in top_results:
         print(f"  {r['ticker']:10s} score:{r['score']}  {r['signals'][0] if r['signals'] else ''}")
