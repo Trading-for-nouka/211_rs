@@ -518,6 +518,20 @@ def main():
 
     if top_results:
         send_discord(top_results, scan_date)
+        # ↓ ここから追加
+        for r in top_results:
+            name       = NAME_MAP.get(r["ticker"], r["ticker"])
+            entry_low  = r.get("entry_low",  round(r["close"]))
+            entry_high = r.get("entry_high", round(r["close"]))
+            stop       = r.get("stop_loss", 0)
+            if DISCORD_WEBHOOK:
+                requests.post(DISCORD_WEBHOOK, json={"content":
+                    f"🛒 **{name}（{r['ticker']}）**\n"
+                    f"　 📌 {entry_low}〜{entry_high}円 | 🛑 {stop}円\n"
+                    f"📎 {r['ticker']}|rs|{round(r['close'])}|{stop}|{name}"
+                }, timeout=10)
+        # ↑ ここまで追加
+
     else:
         send_discord_no_signal(scan_date)
 
