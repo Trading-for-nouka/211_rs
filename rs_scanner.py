@@ -444,7 +444,7 @@ def format_discord_embeds(results: list[dict], scan_date: str, total_count: int 
             )
             if r.get("entry_low"):
                 line += (
-                    f"\n　 📌 参考: {r['entry_low']:,}〜{r['entry_high']:,}円"
+                    f"\n　 📌 参考エントリー価格: {r['entry_low']:,}〜{r['entry_high']:,}円"
                     f" | 🛑 撤退目安: {r['stop_loss']:,}円"
                     f" | 🎯 目標目安: {r['target']:,}円"
                 )
@@ -620,7 +620,7 @@ def main():
                 resp = requests.post(DISCORD_WEBHOOK, json={"content":
                     f"🛒 **{name}（{r['ticker']}）** [{r.get('priority', '')}]"
                     f"  ⏱目標{HOLD_DAYS_TARGET}日保有\n"
-                    f"　 📌 参考: {entry_low:,}〜{entry_high:,}円"
+                    f"　 📌 参考エントリー価格: {entry_low:,}〜{entry_high:,}円"
                     f" | 🛑 損切目安: {stop:,}円（-10%）\n"
                     f"📎 {r['ticker']}|rs|{entry_price}|{stop}|{name}"
                 }, timeout=10)
