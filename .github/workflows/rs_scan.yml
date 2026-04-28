@@ -33,4 +33,6 @@ jobs:
       - name: Run RS Scanner
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-        run: python rs_scanner.py
+        run: |
+            sleep 30       # ← 実行前に30秒待機を追加
+            python rs_scanner.py
