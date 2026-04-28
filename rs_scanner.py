@@ -12,8 +12,10 @@ RS Scanner (Relative Strength Scanner) v5
                        かつ個別銘柄が同セクター内で出遅れ
                        かつ出来高が直近平均より増加
 季節性フィルター（バックテスト2015-2025年で検証済み）:
-  除外月: 3月・6月・7月（平均リターンがマイナスの月）
-  ※ 除外月はシグナルが出ても通知しない
+  除外月: 3月（平均リターンがマイナスの月）
+シグナル条件（バックテスト最適化済み）:
+  [A]必須 + [B]または[C]との組み合わせのみ通知
+  優先度: 最優先=[A]+[B]+[C] / 次点=[A]+[C] / 通常=[A]+[B]
 通知   : Discord Webhook
 """
 
@@ -49,7 +51,8 @@ VOLUME_INCREASE_RATIO   = 1.10
 SECTOR_TOP_N            = 3
 
 # ──────────────────────────────────────────────
-# 季節性フィルター（バックテスト2015-2025検証済み）
+# 季節性フィルター（バックテスト検証済み）
+# 3月のみ除外（唯一の平均マイナス月）
 # ──────────────────────────────────────────────
 MONTHLY_BIAS: dict[int, int] = {
     1:  0,
@@ -57,15 +60,15 @@ MONTHLY_BIAS: dict[int, int] = {
     3: -1,
     4:  1,
     5:  1,
-    6: -1,
-    7: -1,
+    6:  0,
+    7:  0,
     8:  0,
     9:  1,
     10: 1,
     11: 1,
     12: 0,
 }
-EXCLUDE_MONTHS = [m for m, b in MONTHLY_BIAS.items() if b == -1]
+EXCLUDE_MONTHS = [3]
 
 # ──────────────────────────────────────────────
 # universe.csv 読み込み
@@ -224,12 +227,12 @@ def fetch_close(ticker: str) -> pd.Series | None:
         if df.empty or len(df) < 25:
             return None
         return df["Close"].squeeze()
-    except Exception:
+    except Exception as e:
+        print(f"[WARN] {ticker} 取得失敗: {e}")
         return None
 
 
 def fetch_ohlcv_all(tickers: list[str]) -> dict[str, pd.DataFrame]:
-    """High/Low/Close/Volume を一括取得（ATR計算に使用）"""
     BATCH = 50
     data: dict[str, pd.DataFrame] = {}
 
@@ -292,8 +295,8 @@ def detect_patterns(
     stock: pd.Series,
     bench_data: dict[str, pd.Series],
 ) -> dict | None:
-    signals    = []
-    score      = 0
+    signals     = []
+    score       = 0
     rs_snapshot = {}
     price_ret_5 = stock.pct_change(5).iloc[-1]
 
@@ -303,7 +306,7 @@ def detect_patterns(
             if rs.dropna().empty:
                 continue
 
-            rs_latest = rs.iloc[-1]
+            rs_latest = rs.dropna().iloc[-1]
             rs_snapshot[f"RS{period}_{bname}"] = round(float(rs_latest), 3)
 
             if rs_latest > RS_LEVEL_THRESHOLD:
@@ -328,6 +331,22 @@ def detect_patterns(
     if score == 0:
         return None
 
+    has_a = any("[A]" in s for s in signals)
+    has_b = any("[B]" in s for s in signals)
+    has_c = any("[C]" in s for s in signals)
+
+    # [A]必須 + [A]のみは除外（[B]か[C]との組み合わせが必要）
+    if not has_a or not (has_b or has_c):
+        return None
+
+    # 優先度ラベル
+    if has_a and has_b and has_c:
+        priority = "最優先"
+    elif has_a and has_c:
+        priority = "次点"
+    else:
+        priority = "通常"
+
     return {
         "ticker":      ticker,
         "score":       score,
@@ -335,13 +354,18 @@ def detect_patterns(
         "rs_values":   rs_snapshot,
         "price_ret_5": price_ret_5,
         "close":       float(stock.iloc[-1]),
+        "priority":    priority,
     }
 
 
 # ──────────────────────────────────────────────
 # Discord通知
 # ──────────────────────────────────────────────
-SIG_BADGE = {"[A]": "A", "[B]": "B", "[C]": "C"}
+PRIORITY_HEADER = {
+    "最優先": "🥇 **最優先 [A]+[B]+[C]**",
+    "次点":   "🥈 **次点 [A]+[C]**",
+    "通常":   "🥉 **通常 [A]+[B]**",
+}
 
 def format_discord_embeds(results: list[dict], scan_date: str, total_count: int = 0) -> list[dict]:
     if not results:
@@ -351,34 +375,39 @@ def format_discord_embeds(results: list[dict], scan_date: str, total_count: int 
             "color": 0x555555,
         }]
 
-    lines = []
+    groups = {"最優先": [], "次点": [], "通常": []}
     for r in results:
-        ret5 = r["price_ret_5"] * 100
-        badges = "".join(
-            f"[{SIG_BADGE[k]}]"
-            for k in SIG_BADGE
-            if any(k in s for s in r["signals"])
-        )
-        rs20 = r["rs_values"].get("RS20_N225", "-")
-        icon = "🔥" if r["score"] >= 6 else "⚡"
-        name = NAME_MAP.get(r["ticker"], r["ticker"])
-        line = (
-            f"{icon} **{name}**（{r['ticker']}） {badges}  "
-            f"{r['close']:,.0f}円  {ret5:+.1f}%  RS20={rs20}"
-        )
-        if r.get("entry_low"):
-            line += (
-                f"\n　 📌 参考: {r['entry_low']:,}〜{r['entry_high']:,}円"
-                f" | 🛑 撤退目安: {r['stop_loss']:,}円"
-                f" | 🎯 目標目安: {r['target']:,}円"
+        groups[r.get("priority", "通常")].append(r)
+
+    lines = []
+    for priority in ["最優先", "次点", "通常"]:
+        group = groups[priority]
+        if not group:
+            continue
+        lines.append(PRIORITY_HEADER[priority])
+        for r in group:
+            ret5 = r["price_ret_5"] * 100
+            rs20 = r["rs_values"].get("RS20_N225", "-")
+            icon = "🔥" if priority == "最優先" else ("⚡" if priority == "次点" else "📌")
+            name = NAME_MAP.get(r["ticker"], r["ticker"])
+            line = (
+                f"{icon} **{name}**（{r['ticker']}）  "
+                f"{r['close']:,.0f}円  {ret5:+.1f}%  RS20={rs20}"
             )
-        lines.append(line)
+            if r.get("entry_low"):
+                line += (
+                    f"\n　 📌 参考: {r['entry_low']:,}〜{r['entry_high']:,}円"
+                    f" | 🛑 撤退目安: {r['stop_loss']:,}円"
+                    f" | 🎯 目標目安: {r['target']:,}円"
+                )
+            lines.append(line)
+        lines.append("")
 
     bias_label = "強気月" if MONTHLY_BIAS.get(datetime.date.today().month, 0) > 0 else "中立月"
-    description = "\n".join(lines)
+    description = "\n".join(lines).rstrip()
     description += (
         f"\n\n対象{len(NIKKEI225_SAMPLE)}銘柄 / "
-        f"検出{total_count}件→上位{len(results)}件表示 / "
+        f"検出{total_count}件→上位{len(results)}件 / "
         f"{bias_label}"
     )
 
@@ -518,32 +547,30 @@ def main():
     print(f"  セクター出遅れ検出: {len(sector_results)}件")
 
     if top_results:
-        send_discord(top_results, scan_date)
-        # ↓ ここから追加
+        send_discord(top_results, scan_date, total_count=len(results))
+
         for r in top_results:
             name       = NAME_MAP.get(r["ticker"], r["ticker"])
             entry_low  = r.get("entry_low",  round(r["close"]))
             entry_high = r.get("entry_high", round(r["close"]))
             stop       = r.get("stop_loss", 0)
             if DISCORD_WEBHOOK:
-              resp = requests.post(DISCORD_WEBHOOK, json={"content":
-                f"🛒 **{name}（{r['ticker']}）**\n"
-                f"　 📌 {entry_low}〜{entry_high}円 | 🛑 {stop}円\n"
-                f"📎 {r['ticker']}|rs|{round(r['close'])}|{stop}|{name}"
-            }, timeout=10)
-            if resp.status_code not in (200, 204):
-                print(f"[WARN] Discord個別通知失敗: {resp.status_code}")
-        # ↑ ここまで追加
-
+                resp = requests.post(DISCORD_WEBHOOK, json={"content":
+                    f"🛒 **{name}（{r['ticker']}）** [{r.get('priority', '')}]\n"
+                    f"　 📌 {entry_low:,}〜{entry_high:,}円 | 🛑 {stop:,}円\n"
+                    f"📎 {r['ticker']}|rs|{round(r['close'])}|{stop}|{name}"
+                }, timeout=10)
+                if resp.status_code not in (200, 204):
+                    print(f"[WARN] Discord個別通知失敗: {resp.status_code}")
     else:
         send_discord_no_signal(scan_date)
 
     if sector_results:
-        send_discord(top_results, scan_date, total_count=len(results))
-      
+        send_discord_sector(sector_results, scan_date)
+
     print(f"\n── RSシグナル上位 ──")
     for r in top_results:
-        print(f"  {r['ticker']:10s} score:{r['score']}  {r['signals'][0] if r['signals'] else ''}")
+        print(f"  {r['ticker']:10s} [{r.get('priority','')}] score:{r['score']}  {r['signals'][0] if r['signals'] else ''}")
 
     print(f"\n── セクター出遅れ上位 ──")
     for r in sector_results:
