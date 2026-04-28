@@ -283,13 +283,19 @@ def fetch_ohlcv_all(tickers: list[str]) -> dict[str, pd.DataFrame]:
 # RS計算
 # ──────────────────────────────────────────────
 def calc_rs(stock: pd.Series, bench: pd.Series, period: int) -> pd.Series:
-    common = stock.index.intersection(bench.index)
-    s = stock.loc[common]
-    b = bench.loc[common]
+    # tz-naive に統一（yf.download と yf.Ticker().history のtz不一致対策）
+    s = stock.copy()
+    b = bench.copy()
+    if s.index.tz is not None:
+        s.index = s.index.tz_localize(None)
+    if b.index.tz is not None:
+        b.index = b.index.tz_localize(None)
+    common = s.index.intersection(b.index)
+    s = s.loc[common]
+    b = b.loc[common]
     s_ret = s.pct_change(period)
     b_ret = b.pct_change(period)
     return s_ret / b_ret.replace(0, np.nan)
-
 
 # ──────────────────────────────────────────────
 # 売買水準計算（ATRベース参考値）
