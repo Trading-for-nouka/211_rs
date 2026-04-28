@@ -225,7 +225,10 @@ def fetch_close(ticker: str) -> pd.Series | None:
     try:
         df = yf.download(ticker, period=FETCH_PERIOD, progress=False, auto_adjust=True)
         if df.empty or len(df) < 25:
-            return None
+          print(f"[WARN] {ticker} データ不足: {len(df)}行")
+          return None
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
         return df["Close"].squeeze()
     except Exception as e:
         print(f"[WARN] {ticker} 取得失敗: {e}")
