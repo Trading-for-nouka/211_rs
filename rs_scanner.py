@@ -140,6 +140,12 @@ BENCHMARKS = {
     "TOPIX": "1306.T",
 }
 
+# ^N225 / 1306.T が取得できない場合の代替ETF
+BENCHMARK_FALLBACKS = {
+    "^N225":  "1321.T",   # 日経225連動型上場投信（野村AM）
+    "1306.T": "1308.T",   # 上場インデックスファンドTOPIX
+}
+
 
 # ──────────────────────────────────────────────
 # セクター出遅れ検出（BNF流）
@@ -232,19 +238,35 @@ def detect_sector_laggards(
 # データ取得
 # ──────────────────────────────────────────────
 def fetch_close(ticker: str) -> pd.Series | None:
-    # yf.download() はインデックス系（^N225 等）で不安定なため
-    # yf.Ticker().history() を使用し、3回リトライする
+      # まず Ticker().history() を試みる
     for attempt in range(3):
         try:
             df = yf.Ticker(ticker).history(period=FETCH_PERIOD, auto_adjust=True)
             if df.empty or len(df) < 25:
-                print(f"[WARN] {ticker} データ不足: {len(df)}行")
-                time.sleep(2)
-                continue
-            return df["Close"].rename(ticker)
+                raise ValueError(f"データ不足: {len(df)}行")
+            s = df["Close"].rename(ticker)
+            if s.index.tz is not None:
+                s.index = s.index.tz_localize(None)
+            return s
         except Exception as e:
+            msg = str(e)
             print(f"[WARN] {ticker} 取得失敗 (試行{attempt+1}/3): {e}")
-            time.sleep(2)
+            wait = 60 * (attempt + 1) if ("Rate" in msg or "Too Many" in msg) else 5
+            if attempt < 2:
+                print(f"  → {wait}秒待機後リトライ...")
+                time.sleep(wait)
+     # フォールバック: yf.download() を試みる
+    try:
+        print(f"  → {ticker} yf.download() でリトライ...")
+        raw = yf.download(ticker, period=FETCH_PERIOD, progress=False, auto_adjust=True)
+        if not raw.empty and len(raw) >= 25:
+            s = raw["Close"].squeeze().rename(ticker)
+            if s.index.tz is not None:
+                s.index = s.index.tz_localize(None)
+            return s
+    except Exception as e:
+        print(f"[WARN] {ticker} yf.download() も失敗: {e}")
+
     return None
 
 
@@ -526,9 +548,16 @@ def main():
     bench_data = {}
     for bname, bticker in BENCHMARKS.items():
         s = fetch_close(bticker)
+        # 取得失敗時は代替ティッカーで再試行
+        if s is None and bticker in BENCHMARK_FALLBACKS:
+            fallback = BENCHMARK_FALLBACKS[bticker]
+            print(f"  → 代替ティッカー {fallback} で取得試行...")
+            s = fetch_close(fallback)
         if s is not None:
             bench_data[bname] = s
             print(f"  {bname}: {len(s)}日分 OK")
+        else:
+            print(f"  [ERROR] {bname} 取得失敗（代替含む）")
         time.sleep(SLEEP_SEC)
 
     if not bench_data:
