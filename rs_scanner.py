@@ -36,7 +36,7 @@ DISCORD_WEBHOOK = os.environ.get("DISCORD_WEBHOOK", "")
 RS_LEVEL_THRESHOLD  = 1.15
 RS_HIDDEN_THRESHOLD = 1.10
 RS_PERIODS          = [5, 10, 20]
-TOP_N               = 5
+TOP_N               = 3
 FETCH_PERIOD        = "3mo"
 SLEEP_SEC           = 1.2
 
