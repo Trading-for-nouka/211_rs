@@ -380,7 +380,11 @@ def detect_patterns(
     has_c = any("[C]" in s for s in signals)
 
     # [A]必須 + [A]のみは除外（[B]か[C]との組み合わせが必要）
-    if not has_a or not (has_b or has_c):
+    #if not has_a or not (has_b or has_c):
+    #   return None
+修正後：
+    # [A]+[B]+[C] の三拍子揃ったシグナルのみ通知
+    if not (has_a and has_b and has_c):
         return None
 
     # 優先度ラベル
