@@ -1,5 +1,5 @@
 """
-RS Scanner (Relative Strength Scanner) v5
+RS Scanner (Relative Strength Scanner) v6
 ==========================================
 対象   : 日経225構成銘柄
 指標   : RS vs 日経225 / TOPIX（5日・10日・20日）
@@ -11,12 +11,15 @@ RS Scanner (Relative Strength Scanner) v5
   [S] セクター出遅れ … セクター平均5日リターン > 閾値
                        かつ個別銘柄が同セクター内で出遅れ
                        かつ出来高が直近平均より増加
-季節性フィルター（バックテスト2015-2025年で検証済み）:
-  除外月: 3月（平均リターンがマイナスの月）
+季節性フィルター（バックテスト10年 / 日足安値ストップ検証済み）:
+  除外月: 3月（唯一の平均マイナス月）
 シグナル条件（バックテスト最適化済み）:
   [A]必須 + [B]または[C]との組み合わせのみ通知
   優先度: 最優先=[A]+[B]+[C] / 次点=[A]+[C] / 通常=[A]+[B]
-通知   : Discord Webhook
+保有戦略（バックテスト最適値）:
+  目標保有日数: 20営業日 / 損切り目安: -10%
+  [A]+[B]+[C]複合シグナル: PF 1.69 / 勝率57.9% / 平均+1.77%
+通知   : Discord Webhook（📎形式で301_portfolio_summaryと連動）
 """
 
 import os
@@ -29,6 +32,9 @@ import requests
 import pandas as pd
 import numpy as np
 import yfinance as yf
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ──────────────────────────────────────────────
 # 設定
@@ -41,6 +47,10 @@ RS_PERIODS          = [5, 10, 20]
 TOP_N               = 3
 FETCH_PERIOD        = "3mo"
 SLEEP_SEC           = 1.2
+
+# ── バックテスト最適値（10年 / 日足安値ストップ） ──────
+HOLD_DAYS_TARGET = 20     # 目標保有営業日数
+STOP_PCT         = -0.10  # 損切り基準（-10%）
 
 # ──────────────────────────────────────────────
 # セクター出遅れ設定（BNF流）
@@ -222,17 +232,20 @@ def detect_sector_laggards(
 # データ取得
 # ──────────────────────────────────────────────
 def fetch_close(ticker: str) -> pd.Series | None:
-    try:
-        df = yf.download(ticker, period=FETCH_PERIOD, progress=False, auto_adjust=True)
-        if df.empty or len(df) < 25:
-          print(f"[WARN] {ticker} データ不足: {len(df)}行")
-          return None
-        if isinstance(df.columns, pd.MultiIndex):
-            df.columns = df.columns.get_level_values(0)
-        return df["Close"].squeeze()
-    except Exception as e:
-        print(f"[WARN] {ticker} 取得失敗: {e}")
-        return None
+    # yf.download() はインデックス系（^N225 等）で不安定なため
+    # yf.Ticker().history() を使用し、3回リトライする
+    for attempt in range(3):
+        try:
+            df = yf.Ticker(ticker).history(period=FETCH_PERIOD, auto_adjust=True)
+            if df.empty or len(df) < 25:
+                print(f"[WARN] {ticker} データ不足: {len(df)}行")
+                time.sleep(2)
+                continue
+            return df["Close"].rename(ticker)
+        except Exception as e:
+            print(f"[WARN] {ticker} 取得失敗 (試行{attempt+1}/3): {e}")
+            time.sleep(2)
+    return None
 
 
 def fetch_ohlcv_all(tickers: list[str]) -> dict[str, pd.DataFrame]:
@@ -283,10 +296,10 @@ def calc_rs(stock: pd.Series, bench: pd.Series, period: int) -> pd.Series:
 # ──────────────────────────────────────────────
 def calc_rs_levels(close: float, atr: float) -> dict:
     return {
-        "entry_low":  round(close - atr * 0.3),
+        "entry_low":  round(close - atr * 0.3),          # ATRベース参考エントリー範囲
         "entry_high": round(close + atr * 0.3),
-        "stop_loss":  round(close - atr * 1.5),
-        "target":     round(close + atr * 3.0),
+        "stop_loss":  round(close * (1 + STOP_PCT)),      # -10%固定（バックテスト推奨）
+        "target":     round(close * 1.08),                # +8%参考目標
     }
 
 
@@ -556,12 +569,16 @@ def main():
             name       = NAME_MAP.get(r["ticker"], r["ticker"])
             entry_low  = r.get("entry_low",  round(r["close"]))
             entry_high = r.get("entry_high", round(r["close"]))
-            stop       = r.get("stop_loss", 0)
+            # stop_lossが未設定の場合は -10% を使用（バックテスト推奨値）
+            stop       = r.get("stop_loss", round(r["close"] * (1 + STOP_PCT)))
+            entry_price = round(r["close"])
             if DISCORD_WEBHOOK:
                 resp = requests.post(DISCORD_WEBHOOK, json={"content":
-                    f"🛒 **{name}（{r['ticker']}）** [{r.get('priority', '')}]\n"
-                    f"　 📌 {entry_low:,}〜{entry_high:,}円 | 🛑 {stop:,}円\n"
-                    f"📎 {r['ticker']}|rs|{round(r['close'])}|{stop}|{name}"
+                    f"🛒 **{name}（{r['ticker']}）** [{r.get('priority', '')}]"
+                    f"  ⏱目標{HOLD_DAYS_TARGET}日保有\n"
+                    f"　 📌 参考: {entry_low:,}〜{entry_high:,}円"
+                    f" | 🛑 損切目安: {stop:,}円（-10%）\n"
+                    f"📎 {r['ticker']}|rs|{entry_price}|{stop}|{name}"
                 }, timeout=10)
                 if resp.status_code not in (200, 204):
                     print(f"[WARN] Discord個別通知失敗: {resp.status_code}")
