@@ -7,9 +7,9 @@
 name: RS Monitor
 
 on:
-  schedule:
+  #schedule:
     # 平日 16:00 JST（07:00 UTC）に実行 ← 取引終了(15:30)後の余裕を持たせた時刻
-    - cron: '0 7 * * 1-5'
+   # - cron: '0 7 * * 1-5'
   workflow_dispatch:  # GitHub画面から手動実行も可能
 
 jobs:
