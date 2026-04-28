@@ -46,7 +46,7 @@ SLEEP_SEC           = 1.2
 SECTOR_RETURN_THRESHOLD = 0.02
 SECTOR_LAG_RATIO        = 0.50
 VOLUME_INCREASE_RATIO   = 1.10
-SECTOR_TOP_N            = 8
+SECTOR_TOP_N            = 3
 
 # ──────────────────────────────────────────────
 # 季節性フィルター（バックテスト2015-2025検証済み）
