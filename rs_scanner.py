@@ -343,7 +343,7 @@ def detect_patterns(
 # ──────────────────────────────────────────────
 SIG_BADGE = {"[A]": "A", "[B]": "B", "[C]": "C"}
 
-def format_discord_embeds(results: list[dict], scan_date: str) -> list[dict]:
+def format_discord_embeds(results: list[dict], scan_date: str, total_count: int = 0) -> list[dict]:
     if not results:
         return [{
             "title": f"📈 RSスキャナー — {scan_date}",
@@ -378,7 +378,7 @@ def format_discord_embeds(results: list[dict], scan_date: str) -> list[dict]:
     description = "\n".join(lines)
     description += (
         f"\n\n対象{len(NIKKEI225_SAMPLE)}銘柄 / "
-        f"検出{len(results)}件→上位{len(results[:TOP_N])}件表示 / "
+        f"検出{total_count}件→上位{len(results)}件表示 / "
         f"{bias_label}"
     )
 
@@ -389,11 +389,11 @@ def format_discord_embeds(results: list[dict], scan_date: str) -> list[dict]:
     }]
 
 
-def send_discord(results: list[dict], scan_date: str):
+def send_discord(results: list[dict], scan_date: str, total_count: int = 0):
     if not DISCORD_WEBHOOK:
         print("[WARN] DISCORD_WEBHOOK 未設定")
         return
-    embeds = format_discord_embeds(results, scan_date)
+    embeds = format_discord_embeds(results, scan_date, total_count)
     payload = {"embeds": embeds}
     resp = requests.post(DISCORD_WEBHOOK, json=payload, timeout=10)
     if resp.status_code not in (200, 204):
@@ -510,7 +510,8 @@ def main():
         ohlcv = volume_data.get(r["ticker"])
         if ohlcv is not None and "High" in ohlcv.columns and len(ohlcv) >= 14:
             atr = float((ohlcv["High"] - ohlcv["Low"]).rolling(14).mean().iloc[-1])
-            r.update(calc_rs_levels(r["close"], atr))
+            if not np.isnan(atr) and atr > 0:
+                r.update(calc_rs_levels(r["close"], atr))
 
     print("\n[4/4] セクター出遅れスキャン実行中...")
     sector_results = detect_sector_laggards(stock_data, volume_data, scan_date)
@@ -525,19 +526,21 @@ def main():
             entry_high = r.get("entry_high", round(r["close"]))
             stop       = r.get("stop_loss", 0)
             if DISCORD_WEBHOOK:
-                requests.post(DISCORD_WEBHOOK, json={"content":
-                    f"🛒 **{name}（{r['ticker']}）**\n"
-                    f"　 📌 {entry_low}〜{entry_high}円 | 🛑 {stop}円\n"
-                    f"📎 {r['ticker']}|rs|{round(r['close'])}|{stop}|{name}"
-                }, timeout=10)
+              resp = requests.post(DISCORD_WEBHOOK, json={"content":
+                f"🛒 **{name}（{r['ticker']}）**\n"
+                f"　 📌 {entry_low}〜{entry_high}円 | 🛑 {stop}円\n"
+                f"📎 {r['ticker']}|rs|{round(r['close'])}|{stop}|{name}"
+            }, timeout=10)
+            if resp.status_code not in (200, 204):
+                print(f"[WARN] Discord個別通知失敗: {resp.status_code}")
         # ↑ ここまで追加
 
     else:
         send_discord_no_signal(scan_date)
 
     if sector_results:
-        send_discord_sector(sector_results, scan_date)
-
+        send_discord(top_results, scan_date, total_count=len(results))
+      
     print(f"\n── RSシグナル上位 ──")
     for r in top_results:
         print(f"  {r['ticker']:10s} score:{r['score']}  {r['signals'][0] if r['signals'] else ''}")
