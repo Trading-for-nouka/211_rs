@@ -544,29 +544,34 @@ def main():
     bias_label = "強気月" if monthly_bias > 0 else "中立月"
     print(f"\n季節性チェック: {current_month}月 = {bias_label} → スキャン続行")
 
-    print("\n[1/4] ベンチマーク取得中...")
+# ベンチマーク + 銘柄を一括ダウンロード（API呼び出しを1回にまとめる）
+    bench_tickers = list(BENCHMARKS.values()) + list(BENCHMARK_FALLBACKS.values())
+    all_tickers   = list(dict.fromkeys(bench_tickers + NIKKEI225_SAMPLE))
+    print(f"\n[1/4] 全データ一括取得中（{len(all_tickers)}銘柄）...")
+    ohlcv_data = fetch_ohlcv_all(all_tickers)
+    print(f"  取得成功: {len(ohlcv_data)}/{len(all_tickers)}銘柄")
+
+    # ベンチマーク抽出（取得失敗時は代替ティッカーを使用）
+    print("\n[2/4] ベンチマーク確認...")
     bench_data = {}
     for bname, bticker in BENCHMARKS.items():
-        s = fetch_close(bticker)
-        # 取得失敗時は代替ティッカーで再試行
-        if s is None and bticker in BENCHMARK_FALLBACKS:
-            fallback = BENCHMARK_FALLBACKS[bticker]
-            print(f"  → 代替ティッカー {fallback} で取得試行...")
-            s = fetch_close(fallback)
-        if s is not None:
+        candidate = bticker
+        if candidate not in ohlcv_data:
+            candidate = BENCHMARK_FALLBACKS.get(bticker, bticker)
+            if candidate != bticker:
+                print(f"  {bticker} 未取得 → 代替 {candidate} を使用")
+        if candidate in ohlcv_data:
+            s = ohlcv_data[candidate]["Close"].squeeze().dropna()
+            if s.index.tz is not None:
+                s.index = s.index.tz_localize(None)
             bench_data[bname] = s
             print(f"  {bname}: {len(s)}日分 OK")
         else:
             print(f"  [ERROR] {bname} 取得失敗（代替含む）")
-        time.sleep(SLEEP_SEC)
-
+    
     if not bench_data:
         print("[ERROR] ベンチマーク取得失敗")
         return
-
-    print(f"\n[2/4] 銘柄データ一括取得中（{len(NIKKEI225_SAMPLE)}銘柄）...")
-    ohlcv_data = fetch_ohlcv_all(NIKKEI225_SAMPLE)
-    print(f"  取得成功: {len(ohlcv_data)}/{len(NIKKEI225_SAMPLE)}銘柄")
 
     stock_data:  dict[str, pd.Series]    = {}
     volume_data: dict[str, pd.DataFrame] = {}
