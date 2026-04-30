@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   scan:
@@ -36,3 +36,14 @@ jobs:
         run: |
             sleep 30       # ← 実行前に30秒待機を追加
             python rs_scanner.py
+      - name: Commit selected_positions_rs.json
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          if [ -f selected_positions_rs.json ]; then
+            git add selected_positions_rs.json
+            if ! git diff --cached --quiet; then
+              git commit -m "Update selected_positions_rs [skip ci]"
+              git push
+            fi
+          fi
