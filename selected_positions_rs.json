@@ -1,1 +1,29 @@
-[]
+[
+  {
+    "ticker": "5801.T",
+    "name": "古河電気工業",
+    "entry_date": "2026-04-30",
+    "entry_price": 41980,
+    "highest_price": 41980,
+    "stop_loss": 37782,
+    "strategy": "rs"
+  },
+  {
+    "ticker": "6594.T",
+    "name": "ニデック",
+    "entry_date": "2026-04-30",
+    "entry_price": 2383,
+    "highest_price": 2383,
+    "stop_loss": 2145,
+    "strategy": "rs"
+  },
+  {
+    "ticker": "6981.T",
+    "name": "村田製作所",
+    "entry_date": "2026-04-30",
+    "entry_price": 4846,
+    "highest_price": 4846,
+    "stop_loss": 4361,
+    "strategy": "rs"
+  }
+]
