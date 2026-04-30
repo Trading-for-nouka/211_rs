@@ -23,6 +23,7 @@ RS Scanner (Relative Strength Scanner) v6
 """
 
 import os
+import json
 import time
 import datetime
 import traceback
@@ -607,6 +608,33 @@ def main():
     print(f"  セクター出遅れ検出: {len(sector_results)}件")
 
     if top_results:
+        JSON_FILE = "selected_positions_rs.json"
+        new_entries = [
+            {
+                "ticker":        r["ticker"],
+                "name":          NAME_MAP.get(r["ticker"], r["ticker"]),
+                "entry_date":    scan_date,
+                "entry_price":   round(r["close"]),
+                "highest_price": round(r["close"]),
+                "stop_loss":     r.get("stop_loss", round(r["close"] * (1 + STOP_PCT))),
+                "strategy":      "rs",
+            }
+            for r in top_results
+        ]
+        existing = []
+        if os.path.exists(JSON_FILE):
+            try:
+                with open(JSON_FILE, "r", encoding="utf-8") as f:
+                    existing = json.load(f)
+            except (json.JSONDecodeError, ValueError):
+                existing = []
+        existing_tickers = {p["ticker"] for p in existing}
+        added = [e for e in new_entries if e["ticker"] not in existing_tickers]
+        existing.extend(added)
+        with open(JSON_FILE, "w", encoding="utf-8") as f:
+            json.dump(existing, f, ensure_ascii=False, indent=2)
+        print(f"[OK] selected_positions_rs.json 更新（+{len(added)}件）")
+
         send_discord(top_results, scan_date, total_count=len(results))
 
         for r in top_results:
