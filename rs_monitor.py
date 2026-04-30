@@ -43,7 +43,7 @@ load_dotenv()
 DISCORD_WEBHOOK  = os.environ.get("DISCORD_WEBHOOK", "")
 PAT_TOKEN        = os.environ.get("PAT_TOKEN", "")
 GITHUB_REPO      = "trading-for-nouka/211_rs"
-POSITIONS_FILE   = "positions.json"
+POSITIONS_FILE   = "rs_positions.json"
 
 HOLD_DAYS_TARGET = 20     # バックテスト最適保有営業日数
 SLEEP_SEC        = 0.5
