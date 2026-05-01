@@ -25,5 +25,23 @@
     "highest_price": 4846,
     "stop_loss": 4361,
     "strategy": "rs"
+  },
+  {
+    "ticker": "6857.T",
+    "name": "アドバンテスト",
+    "entry_date": "2026-05-01",
+    "entry_price": 27815,
+    "highest_price": 27815,
+    "stop_loss": 25034,
+    "strategy": "rs"
+  },
+  {
+    "ticker": "6976.T",
+    "name": "太陽誘電",
+    "entry_date": "2026-05-01",
+    "entry_price": 6143,
+    "highest_price": 6143,
+    "stop_loss": 5529,
+    "strategy": "rs"
   }
 ]
