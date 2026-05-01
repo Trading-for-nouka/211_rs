@@ -292,12 +292,12 @@ def fetch_ohlcv_all(tickers: list[str]) -> dict[str, pd.DataFrame]:
                 break  # 成功
             except Exception as e:
                 msg = str(e)
-                if "Rate" in msg or "Too Many" in msg or "429" in msg:
-                    wait = 60 * (attempt + 1)  # 60 → 120 → 180秒
-                    print(f"  [WARN] レート制限 {t} → {wait}秒待機してリトライ ({attempt+1}/{MAX_RETRIES})")
+                if attempt < MAX_RETRIES - 1:
+                    wait = 30 * (attempt + 1)  # 30 → 60 → 90秒
+                    print(f"  [WARN] {t} 取得失敗（{msg[:60]}）→ {wait}秒待機してリトライ ({attempt+1}/{MAX_RETRIES})")
                     time.sleep(wait)
                 else:
-                    print(f"  [WARN] {t} 取得失敗: {e}")
+                    print(f"  [WARN] {t} 取得失敗（最終試行）: {msg[:80]}")
                     break
 
         if idx % 30 == 0:
