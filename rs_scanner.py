@@ -47,7 +47,7 @@ RS_HIDDEN_THRESHOLD = 1.10
 RS_PERIODS          = [5, 10, 20]
 TOP_N               = 3
 FETCH_PERIOD        = "3mo"
-SLEEP_SEC           = 2   # 銘柄間の待機秒数（個別取得）
+SLEEP_SEC           = 1.2
 
 # ── バックテスト最適値（10年 / 日足安値ストップ） ──────
 HOLD_DAYS_TARGET = 20     # 目標保有営業日数
@@ -272,39 +272,32 @@ def fetch_close(ticker: str) -> pd.Series | None:
 
 
 def fetch_ohlcv_all(tickers: list[str]) -> dict[str, pd.DataFrame]:
-    # yf.download() は yfinance 0.2.x でレート制限エラーを例外として投げず
-    # サイレントに空データを返すため、個別取得（Ticker.history）に切り替え。
-    # Ticker.history() はレート制限で例外を投げるのでリトライが確実に機能する。
-    MAX_RETRIES = 3
+    BATCH = 50
     data: dict[str, pd.DataFrame] = {}
-    total = len(tickers)
 
-    for idx, t in enumerate(tickers, 1):
-        for attempt in range(MAX_RETRIES):
-            try:
-                df = yf.Ticker(t).history(period=FETCH_PERIOD, auto_adjust=True)
-                if df.empty or len(df) < 25:
-                    break  # データ不足は何度試しても変わらない
-                df = df[["High", "Low", "Close", "Volume"]].copy()
-                if df.index.tz is not None:
-                    df.index = df.index.tz_localize(None)
-                data[t] = df
-                break  # 成功
-            except Exception as e:
-                msg = str(e)
-                if attempt < MAX_RETRIES - 1:
-                    wait = 30 * (attempt + 1)  # 30 → 60 → 90秒
-                    print(f"  [WARN] {t} 取得失敗（{msg[:60]}）→ {wait}秒待機してリトライ ({attempt+1}/{MAX_RETRIES})")
-                    time.sleep(wait)
-                else:
-                    print(f"  [WARN] {t} 取得失敗（最終試行）: {msg[:80]}")
-                    break
-
-        if idx % 30 == 0:
-            print(f"  取得進捗: {idx}/{total} 銘柄...")
-
-        if idx < total:
-            time.sleep(SLEEP_SEC)
+    for i in range(0, len(tickers), BATCH):
+        batch = tickers[i:i + BATCH]
+        try:
+            raw = yf.download(
+                batch,
+                period=FETCH_PERIOD,
+                progress=False,
+                auto_adjust=True,
+                group_by="ticker",
+            )
+            for t in batch:
+                try:
+                    if len(batch) == 1:
+                        df = raw[["High", "Low", "Close", "Volume"]].copy()
+                    else:
+                        df = raw[t][["High", "Low", "Close", "Volume"]].copy()
+                    if df is not None and len(df) >= 25:
+                        data[t] = df
+                except Exception:
+                    pass
+        except Exception as e:
+            print(f"  [WARN] バッチ取得失敗 ({batch[0]}〜): {e}")
+        time.sleep(SLEEP_SEC)
 
     return data
 
