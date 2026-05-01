@@ -47,7 +47,6 @@ RS_HIDDEN_THRESHOLD = 1.10
 RS_PERIODS          = [5, 10, 20]
 TOP_N               = 3
 FETCH_PERIOD        = "3mo"
-SLEEP_SEC           = 1.2
 
 # ── バックテスト最適値（10年 / 日足安値ストップ） ──────
 HOLD_DAYS_TARGET = 20     # 目標保有営業日数
@@ -272,33 +271,27 @@ def fetch_close(ticker: str) -> pd.Series | None:
 
 
 def fetch_ohlcv_all(tickers: list[str]) -> dict[str, pd.DataFrame]:
-    BATCH = 50
     data: dict[str, pd.DataFrame] = {}
-
-    for i in range(0, len(tickers), BATCH):
-        batch = tickers[i:i + BATCH]
-        try:
-            raw = yf.download(
-                batch,
-                period=FETCH_PERIOD,
-                progress=False,
-                auto_adjust=True,
-                group_by="ticker",
-            )
-            for t in batch:
-                try:
-                    if len(batch) == 1:
-                        df = raw[["High", "Low", "Close", "Volume"]].copy()
-                    else:
-                        df = raw[t][["High", "Low", "Close", "Volume"]].copy()
-                    if df is not None and len(df) >= 25:
-                        data[t] = df
-                except Exception:
-                    pass
-        except Exception as e:
-            print(f"  [WARN] バッチ取得失敗 ({batch[0]}〜): {e}")
-        time.sleep(SLEEP_SEC)
-
+    try:
+        raw = yf.download(
+            tickers,
+            period=FETCH_PERIOD,
+            auto_adjust=True,
+            progress=False,
+            group_by="ticker",
+        )
+        for t in tickers:
+            try:
+                if len(tickers) == 1:
+                    df = raw[["High", "Low", "Close", "Volume"]].copy()
+                else:
+                    df = raw[t][["High", "Low", "Close", "Volume"]].copy()
+                if df is not None and len(df) >= 25:
+                    data[t] = df
+            except Exception:
+                pass
+    except Exception as e:
+        print(f"  [WARN] 全銘柄一括取得失敗: {e}")
     return data
 
 
