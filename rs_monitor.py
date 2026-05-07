@@ -120,7 +120,7 @@ def send_exit_notification(pos: dict, current_price: float, reason: str, pnl_pct
     icon  = "🟢" if pnl_pct >= 0 else "🔴"
     days  = count_trading_days(pos["entry_date"])
     payload = {"embeds": [{
-        "title": f"📤 エグジット通知 — {pos['name']}（{pos['ticker']}）",
+        "title": f"[211_rs] 📤 エグジット通知 — {pos['name']}（{pos['ticker']}）",
         "description": (
             f"{icon} **{reason}**\n\n"
             f"　 エントリー : {pos['entry_price']:,.0f}円"
@@ -142,7 +142,7 @@ def send_hold_summary(summary_lines: list, today_str: str):
     if not DISCORD_WEBHOOK or not summary_lines:
         return
     payload = {"embeds": [{
-        "title": f"📊 211_rs 保有状況 — {today_str}",
+        "title": f"[211_rs] 📊 保有状況 — {today_str}",
         "description": "\n".join(summary_lines),
         "color": 0x1a6b9a,
     }]}
