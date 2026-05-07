@@ -43,5 +43,23 @@
     "highest_price": 6143,
     "stop_loss": 5529,
     "strategy": "rs"
+  },
+  {
+    "ticker": "6920.T",
+    "name": "レーザーテック",
+    "entry_date": "2026-05-07",
+    "entry_price": 44920,
+    "highest_price": 44920,
+    "stop_loss": 40428,
+    "strategy": "rs"
+  },
+  {
+    "ticker": "5214.T",
+    "name": "日本電気硝子",
+    "entry_date": "2026-05-07",
+    "entry_price": 7190,
+    "highest_price": 7190,
+    "stop_loss": 6471,
+    "strategy": "rs"
   }
 ]
