@@ -532,7 +532,7 @@ def main():
         print(f"\n{msg}")
         if DISCORD_WEBHOOK:
             payload = {"embeds": [{
-                "title": f"📅 RSスキャナー — {scan_date}",
+                "title": f"[211_rs] 📅 RSスキャナー — {scan_date}",
                 "description": msg,
                 "color": 0x888780,
             }]}
