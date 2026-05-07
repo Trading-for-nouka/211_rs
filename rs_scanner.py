@@ -412,7 +412,7 @@ PRIORITY_HEADER = {
 def format_discord_embeds(results: list[dict], scan_date: str, total_count: int = 0) -> list[dict]:
     if not results:
         return [{
-            "title": f"📈 RSスキャナー — {scan_date}",
+            "title": f"[211_rs] 📈 RSスキャナー — {scan_date}",
             "description": "本日シグナルなし",
             "color": 0x555555,
         }]
@@ -454,7 +454,7 @@ def format_discord_embeds(results: list[dict], scan_date: str, total_count: int 
     )
 
     return [{
-        "title": f"📈 RSスキャナー — {scan_date}",
+        "title": f"[211_rs] 📈 RSスキャナー — {scan_date}",
         "description": description,
         "color": 0x1a6b9a,
     }]
@@ -476,7 +476,7 @@ def send_discord_no_signal(scan_date: str):
     if not DISCORD_WEBHOOK:
         return
     payload = {"embeds": [{
-        "title": f"📈 RSスキャナー — {scan_date}",
+        "title": f"[211_rs] 📈 RSスキャナー — {scan_date}",
         "description": "本日シグナルなし",
         "color": 0x555555,
     }]}
