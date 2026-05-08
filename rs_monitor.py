@@ -44,6 +44,7 @@ DISCORD_WEBHOOK  = os.environ.get("DISCORD_WEBHOOK", "")
 PAT_TOKEN        = os.environ.get("PAT_TOKEN", "")
 GITHUB_REPO      = "trading-for-nouka/211_rs"
 POSITIONS_FILE   = "rs_positions.json"
+PENDING_FILE     = "pending_exits.json"
 
 HOLD_DAYS_TARGET = 20     # バックテスト最適保有営業日数
 SLEEP_SEC        = 0.5
@@ -82,6 +83,30 @@ def put_github_positions(positions: list, sha: str | None, msg: str) -> bool:
     r = requests.put(url, headers=GH_HEADERS, json=payload, timeout=10)
     return r.status_code in (200, 201)
 
+
+def get_github_pending_exits() -> tuple[list, str | None]:
+    """pending_exits.json を GitHub から取得。"""
+    url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{PENDING_FILE}"
+    r = requests.get(url, headers=GH_HEADERS, timeout=10)
+    if r.status_code == 404:
+        return [], None
+    if r.status_code != 200:
+        return [], None
+    d = r.json()
+    data = json.loads(base64.b64decode(d["content"]).decode())
+    return data, d["sha"]
+
+
+def put_github_pending_exits(pending: list, sha: str | None) -> None:
+    """pending_exits.json を GitHub に書き戻す。"""
+    url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{PENDING_FILE}"
+    encoded = base64.b64encode(
+        json.dumps(pending, ensure_ascii=False, indent=2).encode()
+    ).decode()
+    payload = {"message": "rs_monitor: pending_exits更新", "content": encoded}
+    if sha:
+        payload["sha"] = sha
+    requests.put(url, headers=GH_HEADERS, json=payload, timeout=10)
 
 # ── 価格取得・日数計算 ─────────────────────────────────
 
@@ -216,7 +241,23 @@ def main():
 
         if exit_reason:
             send_exit_notification(pos, current, exit_reason, pnl)
-            print(f"  [EXIT] {ticker:10s} {pos.get('name',''):12s}"
+            try:
+                pending_list, pending_sha = get_github_pending_exits()
+                if ticker not in {e["ticker"] for e in pending_list}:
+                    pending_list.append({
+                        "ticker":        ticker,
+                        "name":          pos.get("name", ""),
+                        "strategy":      "rs",
+                        "reason":        exit_reason,
+                        "stop_order_id": pos.get("stop_order_id", ""),
+                        "qty":           pos.get("qty", 100),
+                        "created_at":    today_str,
+                    })
+                    put_github_pending_exits(pending_list, pending_sha)
+            except Exception as e:
+                print(f"  [WARN] pending_exits更新失敗: {e}")
+            remaining.append(pos)
+            print(f"  [EXIT→PENDING] {ticker:10s} {pos.get('name',''):12s}"
                   f" → {exit_reason}  損益{pnl:+.1f}%")
             exit_count += 1
             updated = True
