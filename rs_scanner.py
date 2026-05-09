@@ -237,39 +237,6 @@ def detect_sector_laggards(
 # ──────────────────────────────────────────────
 # データ取得
 # ──────────────────────────────────────────────
-def fetch_close(ticker: str) -> pd.Series | None:
-      # まず Ticker().history() を試みる
-    for attempt in range(3):
-        try:
-            df = yf.Ticker(ticker).history(period=FETCH_PERIOD, auto_adjust=True)
-            if df.empty or len(df) < 25:
-                raise ValueError(f"データ不足: {len(df)}行")
-            s = df["Close"].rename(ticker)
-            if s.index.tz is not None:
-                s.index = s.index.tz_localize(None)
-            return s
-        except Exception as e:
-            msg = str(e)
-            print(f"[WARN] {ticker} 取得失敗 (試行{attempt+1}/3): {e}")
-            wait = 60 * (attempt + 1) if ("Rate" in msg or "Too Many" in msg) else 5
-            if attempt < 2:
-                print(f"  → {wait}秒待機後リトライ...")
-                time.sleep(wait)
-     # フォールバック: yf.download() を試みる
-    try:
-        print(f"  → {ticker} yf.download() でリトライ...")
-        raw = yf.download(ticker, period=FETCH_PERIOD, progress=False, auto_adjust=True)
-        if not raw.empty and len(raw) >= 25:
-            s = raw["Close"].squeeze().rename(ticker)
-            if s.index.tz is not None:
-                s.index = s.index.tz_localize(None)
-            return s
-    except Exception as e:
-        print(f"[WARN] {ticker} yf.download() も失敗: {e}")
-
-    return None
-
-
 def fetch_ohlcv_all(tickers: list[str]) -> dict[str, pd.DataFrame]:
     data: dict[str, pd.DataFrame] = {}
     try:
@@ -373,10 +340,6 @@ def detect_patterns(
     has_b = any("[B]" in s for s in signals)
     has_c = any("[C]" in s for s in signals)
 
-    # [A]必須 + [A]のみは除外（[B]か[C]との組み合わせが必要）
-    #if not has_a or not (has_b or has_c):
-    #   return None
-#修正後：
     # [A]+[B]+[C] の三拍子揃ったシグナルのみ通知
     if not (has_a and has_b and has_c):
         return None
@@ -466,21 +429,14 @@ def send_discord(results: list[dict], scan_date: str, total_count: int = 0):
         return
     embeds = format_discord_embeds(results, scan_date, total_count)
     payload = {"embeds": embeds}
-    resp = requests.post(DISCORD_WEBHOOK, json=payload, timeout=10)
-    if resp.status_code not in (200, 204):
-        print(f"[ERROR] Discord送信失敗: {resp.status_code}")
-    print(f"[OK] Discord通知完了（{len(results)}件）")
-
-
-def send_discord_no_signal(scan_date: str):
-    if not DISCORD_WEBHOOK:
-        return
-    payload = {"embeds": [{
-        "title": f"[211_rs] 📈 RSスキャナー — {scan_date}",
-        "description": "本日シグナルなし",
-        "color": 0x555555,
-    }]}
-    requests.post(DISCORD_WEBHOOK, json=payload, timeout=10)
+    try:
+        resp = requests.post(DISCORD_WEBHOOK, json=payload, timeout=10)
+        if resp.status_code not in (200, 204):
+            print(f"[ERROR] Discord送信失敗: {resp.status_code}")
+        else:
+            print(f"[OK] Discord通知完了（{len(results)}件）")
+    except Exception as e:
+        print(f"[WARN] Discord通知失敗: {e}")
 
 
 def send_discord_sector(sector_results: list[dict], scan_date: str):
@@ -505,10 +461,14 @@ def send_discord_sector(sector_results: list[dict], scan_date: str):
         "description": "\n".join(lines),
         "color": 0x8e44ad,
     }]}
-    resp = requests.post(DISCORD_WEBHOOK, json=payload, timeout=10)
-    if resp.status_code not in (200, 204):
-        print(f"[ERROR] Discord送信失敗（セクター）: {resp.status_code}")
-    print(f"[OK] セクター出遅れ Discord通知完了（{len(sector_results)}件）")
+    try:
+        resp = requests.post(DISCORD_WEBHOOK, json=payload, timeout=10)
+        if resp.status_code not in (200, 204):
+            print(f"[ERROR] Discord送信失敗（セクター）: {resp.status_code}")
+        else:
+            print(f"[OK] セクター出遅れ Discord通知完了（{len(sector_results)}件）")
+    except Exception as e:
+        print(f"[WARN] Discord通知失敗（セクター）: {e}")
 
 
 # ──────────────────────────────────────────────
@@ -518,7 +478,7 @@ def main():
     scan_date = datetime.date.today().isoformat()
     today     = datetime.date.today()
     print(f"\n{'='*50}")
-    print(f"RS Scanner v5 開始: {scan_date}")
+    print(f"RS Scanner v6 開始: {scan_date}")
     print(f"{'='*50}")
 
     current_month = today.month
@@ -536,13 +496,16 @@ def main():
                 "description": msg,
                 "color": 0x888780,
             }]}
-            requests.post(DISCORD_WEBHOOK, json=payload, timeout=10)
+            try:
+                requests.post(DISCORD_WEBHOOK, json=payload, timeout=10)
+            except Exception as e:
+                print(f"[WARN] Discord通知失敗（季節性）: {e}")
         return
 
     bias_label = "強気月" if monthly_bias > 0 else "中立月"
     print(f"\n季節性チェック: {current_month}月 = {bias_label} → スキャン続行")
 
-# ベンチマーク + 銘柄を一括ダウンロード（API呼び出しを1回にまとめる）
+    # ベンチマーク + 銘柄を一括ダウンロード（API呼び出しを1回にまとめる）
     bench_tickers = list(BENCHMARKS.values()) + list(BENCHMARK_FALLBACKS.values())
     all_tickers   = list(dict.fromkeys(bench_tickers + NIKKEI225_SAMPLE))
     print(f"\n[1/4] 全データ一括取得中（{len(all_tickers)}銘柄）...")
@@ -566,7 +529,7 @@ def main():
             print(f"  {bname}: {len(s)}日分 OK")
         else:
             print(f"  [ERROR] {bname} 取得失敗（代替含む）")
-    
+
     if not bench_data:
         print("[ERROR] ベンチマーク取得失敗")
         return
@@ -624,8 +587,10 @@ def main():
         existing_tickers = {p["ticker"] for p in existing}
         added = [e for e in new_entries if e["ticker"] not in existing_tickers]
         existing.extend(added)
-        with open(JSON_FILE, "w", encoding="utf-8") as f:
+        tmp_path = JSON_FILE + ".tmp"
+        with open(tmp_path, "w", encoding="utf-8") as f:
             json.dump(existing, f, ensure_ascii=False, indent=2)
+        os.replace(tmp_path, JSON_FILE)
         print(f"[OK] selected_positions_rs.json 更新（+{len(added)}件）")
 
         send_discord(top_results, scan_date, total_count=len(results))
@@ -634,21 +599,23 @@ def main():
             name       = NAME_MAP.get(r["ticker"], r["ticker"])
             entry_low  = r.get("entry_low",  round(r["close"]))
             entry_high = r.get("entry_high", round(r["close"]))
-            # stop_lossが未設定の場合は -10% を使用（バックテスト推奨値）
             stop       = r.get("stop_loss", round(r["close"] * (1 + STOP_PCT)))
             entry_price = round(r["close"])
             if DISCORD_WEBHOOK:
-                resp = requests.post(DISCORD_WEBHOOK, json={"content":
-                    f"🛒 **{name}（{r['ticker']}）** [{r.get('priority', '')}]"
-                    f"  ⏱目標{HOLD_DAYS_TARGET}日保有\n"
-                    f"　 📌 参考エントリー価格: {entry_low:,}〜{entry_high:,}円"
-                    f" | 🛑 損切目安: {stop:,}円（-10%）\n"
-                    f"📎 {r['ticker']}|rs|{entry_price}|{stop}|{name}"
-                }, timeout=10)
-                if resp.status_code not in (200, 204):
-                    print(f"[WARN] Discord個別通知失敗: {resp.status_code}")
+                try:
+                    resp = requests.post(DISCORD_WEBHOOK, json={"content":
+                        f"🛒 **{name}（{r['ticker']}）** [{r.get('priority', '')}]"
+                        f"  ⏱目標{HOLD_DAYS_TARGET}日保有\n"
+                        f"　 📌 参考エントリー価格: {entry_low:,}〜{entry_high:,}円"
+                        f" | 🛑 損切目安: {stop:,}円（-10%）\n"
+                        f"📎 {r['ticker']}|rs|{entry_price}|{stop}|{name}"
+                    }, timeout=10)
+                    if resp.status_code not in (200, 204):
+                        print(f"[WARN] Discord個別通知失敗: {resp.status_code}")
+                except Exception as e:
+                    print(f"[WARN] Discord個別通知失敗: {e}")
     else:
-        send_discord_no_signal(scan_date)
+        send_discord([], scan_date)
 
     if sector_results:
         send_discord_sector(sector_results, scan_date)
