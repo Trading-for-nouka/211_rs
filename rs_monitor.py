@@ -91,7 +91,8 @@ def get_github_pending_exits() -> tuple[list, str | None]:
     if r.status_code == 404:
         return [], None
     if r.status_code != 200:
-        return [], None
+        print(f"  [WARN] pending_exits取得失敗: {r.status_code} — 上書きを回避します")
+        raise RuntimeError(f"pending_exits取得失敗: {r.status_code}")
     d = r.json()
     data = json.loads(base64.b64decode(d["content"]).decode())
     return data, d["sha"]
@@ -106,7 +107,12 @@ def put_github_pending_exits(pending: list, sha: str | None) -> None:
     payload = {"message": "rs_monitor: pending_exits更新", "content": encoded}
     if sha:
         payload["sha"] = sha
-    requests.put(url, headers=GH_HEADERS, json=payload, timeout=10)
+    try:
+        r = requests.put(url, headers=GH_HEADERS, json=payload, timeout=10)
+        if r.status_code not in (200, 201):
+            print(f"  [WARN] pending_exits書き込み失敗: {r.status_code}")
+    except Exception as e:
+        print(f"  [WARN] pending_exits書き込み失敗: {e}")
 
 # ── 価格取得・日数計算 ─────────────────────────────────
 
