@@ -61,5 +61,23 @@
     "highest_price": 7190,
     "stop_loss": 6471,
     "strategy": "rs"
+  },
+  {
+    "ticker": "1803.T",
+    "name": "清水建設",
+    "entry_date": "2026-05-11",
+    "entry_price": 3131,
+    "highest_price": 3131,
+    "stop_loss": 2818,
+    "strategy": "rs"
+  },
+  {
+    "ticker": "8308.T",
+    "name": "りそなホールディングス",
+    "entry_date": "2026-05-11",
+    "entry_price": 1998,
+    "highest_price": 1998,
+    "stop_loss": 1798,
+    "strategy": "rs"
   }
 ]
