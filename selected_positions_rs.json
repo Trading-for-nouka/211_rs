@@ -106,5 +106,14 @@
     "highest_price": 72800,
     "stop_loss": 65520,
     "strategy": "rs"
+  },
+  {
+    "ticker": "6752.T",
+    "name": "パナソニックホールディングス",
+    "entry_date": "2026-05-13",
+    "entry_price": 3275,
+    "highest_price": 3275,
+    "stop_loss": 2948,
+    "strategy": "rs"
   }
 ]
