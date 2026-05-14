@@ -115,5 +115,32 @@
     "highest_price": 3275,
     "stop_loss": 2948,
     "strategy": "rs"
+  },
+  {
+    "ticker": "4042.T",
+    "name": "東ソー",
+    "entry_date": "2026-05-14",
+    "entry_price": 2618,
+    "highest_price": 2618,
+    "stop_loss": 2356,
+    "strategy": "rs"
+  },
+  {
+    "ticker": "6645.T",
+    "name": "オムロン",
+    "entry_date": "2026-05-14",
+    "entry_price": 5914,
+    "highest_price": 5914,
+    "stop_loss": 5323,
+    "strategy": "rs"
+  },
+  {
+    "ticker": "6861.T",
+    "name": "キーエンス",
+    "entry_date": "2026-05-14",
+    "entry_price": 77310,
+    "highest_price": 77310,
+    "stop_loss": 69579,
+    "strategy": "rs"
   }
 ]
