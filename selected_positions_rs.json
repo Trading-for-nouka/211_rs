@@ -160,5 +160,14 @@
     "highest_price": 4795,
     "stop_loss": 4316,
     "strategy": "rs"
+  },
+  {
+    "ticker": "5706.T",
+    "name": "三井金属鉱業",
+    "entry_date": "2026-05-18",
+    "entry_price": 47320,
+    "highest_price": 47320,
+    "stop_loss": 42588,
+    "strategy": "rs"
   }
 ]
