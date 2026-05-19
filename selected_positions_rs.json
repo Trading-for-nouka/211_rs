@@ -169,5 +169,14 @@
     "highest_price": 47320,
     "stop_loss": 42588,
     "strategy": "rs"
+  },
+  {
+    "ticker": "6472.T",
+    "name": "NTN",
+    "entry_date": "2026-05-19",
+    "entry_price": 386,
+    "highest_price": 386,
+    "stop_loss": 348,
+    "strategy": "rs"
   }
 ]
