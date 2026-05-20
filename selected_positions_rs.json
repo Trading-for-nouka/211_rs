@@ -178,5 +178,32 @@
     "highest_price": 386,
     "stop_loss": 348,
     "strategy": "rs"
+  },
+  {
+    "ticker": "3401.T",
+    "name": "帝人",
+    "entry_date": "2026-05-20",
+    "entry_price": 1602,
+    "highest_price": 1602,
+    "stop_loss": 1442,
+    "strategy": "rs"
+  },
+  {
+    "ticker": "5714.T",
+    "name": "DOWAホールディングス",
+    "entry_date": "2026-05-20",
+    "entry_price": 10125,
+    "highest_price": 10125,
+    "stop_loss": 9112,
+    "strategy": "rs"
+  },
+  {
+    "ticker": "7202.T",
+    "name": "いすゞ自動車",
+    "entry_date": "2026-05-20",
+    "entry_price": 2204,
+    "highest_price": 2204,
+    "stop_loss": 1984,
+    "strategy": "rs"
   }
 ]
