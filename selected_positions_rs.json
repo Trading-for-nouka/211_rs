@@ -223,5 +223,14 @@
     "highest_price": 2646,
     "stop_loss": 2381,
     "strategy": "rs"
+  },
+  {
+    "ticker": "4004.T",
+    "name": "レゾナック・ホールディングス",
+    "entry_date": "2026-05-21",
+    "entry_price": 17310,
+    "highest_price": 17310,
+    "stop_loss": 15579,
+    "strategy": "rs"
   }
 ]
