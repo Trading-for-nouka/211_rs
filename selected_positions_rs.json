@@ -205,5 +205,23 @@
     "highest_price": 2204,
     "stop_loss": 1984,
     "strategy": "rs"
+  },
+  {
+    "ticker": "2802.T",
+    "name": "味の素",
+    "entry_date": "2026-05-21",
+    "entry_price": 5176,
+    "highest_price": 5176,
+    "stop_loss": 4658,
+    "strategy": "rs"
+  },
+  {
+    "ticker": "6113.T",
+    "name": "アマダ",
+    "entry_date": "2026-05-21",
+    "entry_price": 2646,
+    "highest_price": 2646,
+    "stop_loss": 2381,
+    "strategy": "rs"
   }
 ]
