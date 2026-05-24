@@ -232,5 +232,23 @@
     "highest_price": 17310,
     "stop_loss": 15579,
     "strategy": "rs"
+  },
+  {
+    "ticker": "3407.T",
+    "name": "旭化成",
+    "entry_date": "2026-05-24",
+    "entry_price": 1726,
+    "highest_price": 1726,
+    "stop_loss": 1553,
+    "strategy": "rs"
+  },
+  {
+    "ticker": "8015.T",
+    "name": "豊田通商",
+    "entry_date": "2026-05-24",
+    "entry_price": 6974,
+    "highest_price": 6974,
+    "stop_loss": 6277,
+    "strategy": "rs"
   }
 ]
