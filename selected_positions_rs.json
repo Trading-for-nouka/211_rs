@@ -286,5 +286,23 @@
     "highest_price": 1776,
     "stop_loss": 1598,
     "strategy": "rs"
+  },
+  {
+    "ticker": "7186.T",
+    "name": "横浜銀行",
+    "entry_date": "2026-05-27",
+    "entry_price": 1616,
+    "highest_price": 1616,
+    "stop_loss": 1454,
+    "strategy": "rs"
+  },
+  {
+    "ticker": "8331.T",
+    "name": "千葉銀行",
+    "entry_date": "2026-05-27",
+    "entry_price": 2324,
+    "highest_price": 2324,
+    "stop_loss": 2091,
+    "strategy": "rs"
   }
 ]
