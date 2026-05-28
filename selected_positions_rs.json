@@ -304,5 +304,23 @@
     "highest_price": 2324,
     "stop_loss": 2091,
     "strategy": "rs"
+  },
+  {
+    "ticker": "4208.T",
+    "name": "UBE",
+    "entry_date": "2026-05-28",
+    "entry_price": 2930,
+    "highest_price": 2930,
+    "stop_loss": 2637,
+    "strategy": "rs"
+  },
+  {
+    "ticker": "8750.T",
+    "name": "第一生命ホールディングス",
+    "entry_date": "2026-05-28",
+    "entry_price": 1628,
+    "highest_price": 1628,
+    "stop_loss": 1465,
+    "strategy": "rs"
   }
 ]
