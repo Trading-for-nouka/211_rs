@@ -1,1 +1,62 @@
-[]
+[
+  {
+    "ticker": "8015.T",
+    "name": "豊田通商",
+    "entry_date": "2026-05-31",
+    "entry_price": 6930,
+    "highest_price": 6930,
+    "stop_loss": 6237,
+    "strategy": "rs",
+    "metrics": {
+      "rvol": null,
+      "rs": null,
+      "rsi": null,
+      "dev": null,
+      "score": 12,
+      "sector": "不明",
+      "atr14": null,
+      "price": 6930,
+      "price_ret_5": -0.63
+    }
+  },
+  {
+    "ticker": "9301.T",
+    "name": "三菱倉庫",
+    "entry_date": "2026-05-31",
+    "entry_price": 1502,
+    "highest_price": 1502,
+    "stop_loss": 1351,
+    "strategy": "rs",
+    "metrics": {
+      "rvol": null,
+      "rs": null,
+      "rsi": null,
+      "dev": null,
+      "score": 11,
+      "sector": "不明",
+      "atr14": null,
+      "price": 1502,
+      "price_ret_5": -0.2
+    }
+  },
+  {
+    "ticker": "6178.T",
+    "name": "日本郵政",
+    "entry_date": "2026-05-31",
+    "entry_price": 2068,
+    "highest_price": 2068,
+    "stop_loss": 1861,
+    "strategy": "rs",
+    "metrics": {
+      "rvol": null,
+      "rs": null,
+      "rsi": null,
+      "dev": null,
+      "score": 11,
+      "sector": "不明",
+      "atr14": null,
+      "price": 2068,
+      "price_ret_5": -2.27
+    }
+  }
+]
