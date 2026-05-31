@@ -574,6 +574,17 @@ def main():
                 "highest_price": round(r["close"]),
                 "stop_loss":     r.get("stop_loss", round(r["close"] * (1 + STOP_PCT))),
                 "strategy":      "rs",
+                "metrics": {                       # ← 追加
+                    "rvol":   None,                # rsはRVOL/RSI非算出
+                    "rs":     None,
+                    "rsi":    None,
+                    "dev":    None,
+                    "score":  r.get("score"),
+                    "sector": "不明",
+                    "atr14":  None,
+                    "price":  round(r["close"]),
+                    "price_ret_5": round(r.get("price_ret_5", 0) * 100, 2),
+                },
             }
             for r in top_results
         ]
