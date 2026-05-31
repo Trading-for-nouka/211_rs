@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "ticker": "9301.T",
+    "name": "三菱倉庫",
+    "entry_date": "2026-06-01",
+    "entry_price": 1502.0,
+    "highest_price": 1502.0,
+    "stop_loss": 1351.0,
+    "strategy": "rs",
+    "profit_exceeded_3pct": false,
+    "stop_order_id": "",
+    "qty": 100
+  }
+]
