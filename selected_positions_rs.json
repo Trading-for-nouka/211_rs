@@ -58,5 +58,65 @@
       "price": 2068,
       "price_ret_5": -2.27
     }
+  },
+  {
+    "ticker": "4208.T",
+    "name": "UBE",
+    "entry_date": "2026-06-01",
+    "entry_price": 2918,
+    "highest_price": 2918,
+    "stop_loss": 2626,
+    "strategy": "rs",
+    "metrics": {
+      "rvol": null,
+      "rs": null,
+      "rsi": null,
+      "dev": null,
+      "score": 12,
+      "sector": "不明",
+      "atr14": null,
+      "price": 2918,
+      "price_ret_5": -1.75
+    }
+  },
+  {
+    "ticker": "4004.T",
+    "name": "レゾナック・ホールディングス",
+    "entry_date": "2026-06-01",
+    "entry_price": 18430,
+    "highest_price": 18430,
+    "stop_loss": 16587,
+    "strategy": "rs",
+    "metrics": {
+      "rvol": null,
+      "rs": null,
+      "rsi": null,
+      "dev": null,
+      "score": 11,
+      "sector": "不明",
+      "atr14": null,
+      "price": 18430,
+      "price_ret_5": -5.24
+    }
+  },
+  {
+    "ticker": "5101.T",
+    "name": "横浜ゴム",
+    "entry_date": "2026-06-01",
+    "entry_price": 6986,
+    "highest_price": 6986,
+    "stop_loss": 6287,
+    "strategy": "rs",
+    "metrics": {
+      "rvol": null,
+      "rs": null,
+      "rsi": null,
+      "dev": null,
+      "score": 11,
+      "sector": "不明",
+      "atr14": null,
+      "price": 6986,
+      "price_ret_5": -0.63
+    }
   }
 ]
