@@ -118,5 +118,65 @@
       "price": 6986,
       "price_ret_5": -0.63
     }
+  },
+  {
+    "ticker": "5232.T",
+    "name": "住友大阪セメント",
+    "entry_date": "2026-06-02",
+    "entry_price": 5164,
+    "highest_price": 5164,
+    "stop_loss": 4648,
+    "strategy": "rs",
+    "metrics": {
+      "rvol": null,
+      "rs": null,
+      "rsi": null,
+      "dev": null,
+      "score": 12,
+      "sector": "不明",
+      "atr14": null,
+      "price": 5164,
+      "price_ret_5": -1.62
+    }
+  },
+  {
+    "ticker": "6594.T",
+    "name": "ニデック",
+    "entry_date": "2026-06-02",
+    "entry_price": 2815,
+    "highest_price": 2815,
+    "stop_loss": 2534,
+    "strategy": "rs",
+    "metrics": {
+      "rvol": null,
+      "rs": null,
+      "rsi": null,
+      "dev": null,
+      "score": 12,
+      "sector": "不明",
+      "atr14": null,
+      "price": 2815,
+      "price_ret_5": -0.28
+    }
+  },
+  {
+    "ticker": "6113.T",
+    "name": "アマダ",
+    "entry_date": "2026-06-02",
+    "entry_price": 2886,
+    "highest_price": 2886,
+    "stop_loss": 2597,
+    "strategy": "rs",
+    "metrics": {
+      "rvol": null,
+      "rs": null,
+      "rsi": null,
+      "dev": null,
+      "score": 11,
+      "sector": "不明",
+      "atr14": null,
+      "price": 2886,
+      "price_ret_5": -0.89
+    }
   }
 ]
