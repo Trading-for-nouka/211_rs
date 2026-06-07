@@ -278,5 +278,45 @@
       "price": 6942,
       "price_ret_5": -2.72
     }
+  },
+  {
+    "ticker": "4307.T",
+    "name": "野村総合研究所",
+    "entry_date": "2026-06-07",
+    "entry_price": 4882,
+    "highest_price": 4882,
+    "stop_loss": 4394,
+    "strategy": "rs",
+    "metrics": {
+      "rvol": null,
+      "rs": null,
+      "rsi": null,
+      "dev": null,
+      "score": 10,
+      "sector": "不明",
+      "atr14": null,
+      "price": 4882,
+      "price_ret_5": -2.79
+    }
+  },
+  {
+    "ticker": "7261.T",
+    "name": "マツダ",
+    "entry_date": "2026-06-07",
+    "entry_price": 1128,
+    "highest_price": 1128,
+    "stop_loss": 1015,
+    "strategy": "rs",
+    "metrics": {
+      "rvol": null,
+      "rs": null,
+      "rsi": null,
+      "dev": null,
+      "score": 10,
+      "sector": "不明",
+      "atr14": null,
+      "price": 1128,
+      "price_ret_5": -1.78
+    }
   }
 ]
