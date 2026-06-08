@@ -318,5 +318,45 @@
       "price": 1128,
       "price_ret_5": -1.78
     }
+  },
+  {
+    "ticker": "5301.T",
+    "name": "東海カーボン",
+    "entry_date": "2026-06-08",
+    "entry_price": 1782,
+    "highest_price": 1782,
+    "stop_loss": 1604,
+    "strategy": "rs",
+    "metrics": {
+      "rvol": null,
+      "rs": null,
+      "rsi": null,
+      "dev": null,
+      "score": 12,
+      "sector": "不明",
+      "atr14": null,
+      "price": 1782,
+      "price_ret_5": -3.78
+    }
+  },
+  {
+    "ticker": "6976.T",
+    "name": "太陽誘電",
+    "entry_date": "2026-06-08",
+    "entry_price": 14975,
+    "highest_price": 14975,
+    "stop_loss": 13478,
+    "strategy": "rs",
+    "metrics": {
+      "rvol": null,
+      "rs": null,
+      "rsi": null,
+      "dev": null,
+      "score": 12,
+      "sector": "不明",
+      "atr14": null,
+      "price": 14975,
+      "price_ret_5": -6.76
+    }
   }
 ]
