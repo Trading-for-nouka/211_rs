@@ -358,5 +358,25 @@
       "price": 14975,
       "price_ret_5": -6.76
     }
+  },
+  {
+    "ticker": "7269.T",
+    "name": "スズキ",
+    "entry_date": "2026-06-09",
+    "entry_price": 1838,
+    "highest_price": 1838,
+    "stop_loss": 1655,
+    "strategy": "rs",
+    "metrics": {
+      "rvol": null,
+      "rs": null,
+      "rsi": null,
+      "dev": null,
+      "score": 14,
+      "sector": "不明",
+      "atr14": null,
+      "price": 1838,
+      "price_ret_5": -4.17
+    }
   }
 ]
